@@ -54,7 +54,7 @@ export default function MonitoringPage() {
 
     useEffect(() => {
         const fetchSessions = () => {
-            fetch("http://localhost:8000/api/sessions?limit=50")
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sessions?limit=50`)
                 .then((res) => res.json())
                 .then((data) => {
                     setSessions(data)

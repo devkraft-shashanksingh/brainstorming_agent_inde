@@ -75,7 +75,7 @@ function BrainstormAgentContent() {
     // 2. Fetch Research Documents from Backend
     const fetchDocuments = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/research-documents')
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/research-documents`)
         if (res.ok) {
           const data = await res.json()
           setResearchDocuments(data)
@@ -162,7 +162,7 @@ function BrainstormAgentContent() {
         console.warn("Failed to load model config", e)
       }
 
-      const response = await fetch('http://localhost:8000/api/generate-challenge-statements', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/generate-challenge-statements`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

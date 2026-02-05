@@ -68,7 +68,7 @@ export function StatementCard({
   const handleAiRewrite = async () => {
     setIsRewriting(true)
     try {
-      const response = await fetch('http://localhost:8000/api/rewrite-statement', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/rewrite-statement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -94,7 +94,7 @@ export function StatementCard({
   const handleReEvaluate = async () => {
     setIsEvaluating(true)
     try {
-      const response = await fetch('http://localhost:8000/api/evaluate-single-statement', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/evaluate-single-statement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -112,7 +112,7 @@ export function ResearchLibrary({
     formData.append("description", "Uploaded via Research Library")
 
     try {
-      const response = await fetch("http://localhost:8000/api/research-documents/upload", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/research-documents/upload`, {
         method: "POST",
         body: formData,
       })
