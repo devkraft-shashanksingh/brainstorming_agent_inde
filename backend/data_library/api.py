@@ -33,7 +33,12 @@ from data_library.challenge_generator import (
 )
 
 # Create Tables
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"CRITICAL: Database table creation failed: {e}")
+    # Don't raise here, allow app to load so Vercel logs show the error
+    pass
 
 app = FastAPI(title="Challenge Statement Generator API")
 
