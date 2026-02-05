@@ -50,6 +50,17 @@ export function ResultsSection({
         // This assumes the stream only appends new statements and doesn't 
         // need to force-overwrite existing ones.
         if (existing) {
+          // If the new statement has evaluation data that we don't have yet, update it
+          // This fixes the issue where streaming evaluation results were ignored
+          if (newStmt.evaluation && !existing.evaluation) {
+            return {
+              ...existing,
+              evaluation: newStmt.evaluation,
+              selected_format: newStmt.selected_format,
+              // Update other fields that might have changed during evaluation
+              reasoning: newStmt.reasoning
+            }
+          }
           return existing
         }
 

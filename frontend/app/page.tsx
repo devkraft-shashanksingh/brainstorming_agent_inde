@@ -143,9 +143,9 @@ function BrainstormAgentContent() {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
 
       timeoutRef.current = setTimeout(() => {
-        console.warn("⏰ Request timed out! Aborting after 120 seconds...")
+        console.warn("⏰ Request timed out! Aborting after 600 seconds...")
         controller.abort()
-      }, 120000)
+      }, 600000)
 
       // 2. Make API call
       console.log("📡 Sending POST to /api/generate-challenge-statements")
@@ -301,7 +301,7 @@ function BrainstormAgentContent() {
       let errorMessage = "An unexpected error occurred"
       if (err instanceof Error) {
         if (err.name === 'AbortError') {
-          errorMessage = "Request timed out after 120 seconds. The model might be busy."
+          errorMessage = "Request timed out after 600 seconds. The model might be busy."
         } else {
           errorMessage = err.message
         }
@@ -331,7 +331,7 @@ function BrainstormAgentContent() {
       <main className="mx-auto max-w-5xl px-8 py-16 md:py-20 lg:px-8">
 
         {/* LIVE STATUS BANNER */}
-        {(appState === "loading" || (appState === "success" && result?.challenge_statements.length < 5)) && lastLogMessage && (
+        {(appState === "loading" || (appState === "success" && (result?.challenge_statements?.length ?? 0) < 5)) && lastLogMessage && (
           <div className="mb-6 rounded-md border border-blue-200 bg-blue-50 p-4 text-blue-800 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
             <p className="font-mono text-sm">{lastLogMessage}</p>

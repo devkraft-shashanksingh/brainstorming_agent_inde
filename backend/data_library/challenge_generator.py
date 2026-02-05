@@ -462,6 +462,21 @@ Answer these questions about the brief. Follow the tree structure:
 - Answer: "yes" or "no"
 - Provide: reasoning + confidence
 
+**Q6 [If Q5=no]: Is the core challenge lack of motivation or urgency?**
+- Look for: low priority, inertia, “good enough” mindset, no compelling reason to act now
+- Answer: "yes" or "no"
+- Provide: reasoning + confidence
+
+**Q7 [If Q6=no]: Is the barrier primarily about capability or confidence to act?**
+- Look for: skill gaps, confidence issues, uncertainty about execution, fear of doing it wrong
+- Answer: "yes" or "no"
+- Provide: reasoning + confidence
+
+**Q8 [If Q7=no]: Is the opportunity about reframing success or redefining the goal itself?**
+- Look for: outdated success metrics, narrow definitions of value, new standards of care, paradigm shifts
+- Answer: "yes" or "no"
+- Provide: reasoning + confidence
+
 ## TASK 2: Format Selection
 
 Based on your diagnostic analysis, select EXACTLY 5 challenge formats from this list:
