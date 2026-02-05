@@ -3,11 +3,9 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Form
 import logging
 
 # Configure logging to file
-logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("backend_debug.log"),
         logging.StreamHandler()
     ]
 )
