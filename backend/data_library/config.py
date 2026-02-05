@@ -21,7 +21,8 @@ GEMINI_CORPUS_NAME = "brainstorming-research-library"
 AVAILABLE_MODELS = ("gemini-3.0-flash", "gemini-3-pro-preview")
 
 if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in .env file")
+    print("WARNING: GEMINI_API_KEY not found in environment variables. Functionality will be limited.")
+    # raise ValueError("GEMINI_API_KEY not found in .env file")
 
 # Constants
 # Constants
