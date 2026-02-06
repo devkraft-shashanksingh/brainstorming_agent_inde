@@ -33,6 +33,7 @@ def get_client():
 # Model configuration
 # Using stable gemini-1.5-pro for reasoning tasks
 GEMINI_PRO_MODEL = "gemini-3-pro-preview" 
+GEMINI_FLASH_MODEL = "gemini-2.0-flash" 
 
 # ============================================================================
 # STRUCTURED OUTPUT SCHEMA FOR DIAGNOSTIC ANALYSIS
@@ -253,7 +254,10 @@ async def generate_challenges_stream(
         "data": {
             "diagnostic_summary": diagnostic_result["diagnostic_summary"],
             "diagnostic_path": diagnostic_result["diagnostic_path"],
-            "selected_formats": selected_formats
+            "selected_formats": selected_formats,
+            "diagnostic_model": diagnostic_model,
+            "diagnostic_input_tokens": diagnostic_result.get("input_tokens", 0),
+            "diagnostic_output_tokens": diagnostic_result.get("output_tokens", 0)
         }
     })
     
@@ -323,6 +327,9 @@ async def generate_challenges_stream(
             "total_latency_ms": int((total_duration + retrieval_duration) * 1000),
             "diagnostic_ms": int(diagnostic_duration * 1000),
             "retrieval_ms": int(retrieval_duration * 1000),
+            "diagnostic_model": diagnostic_model,
+            "diagnostic_input_tokens": diagnostic_result.get("input_tokens", 0),
+            "diagnostic_output_tokens": diagnostic_result.get("output_tokens", 0)
         }
     })
 
@@ -500,20 +507,45 @@ Return structured JSON with:
 Be specific and cite evidence from the brief in your reasoning."""
 
     try:
-        response = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: get_client().models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=get_diagnostic_schema(),
-                    temperature=0.3
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: get_client().models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=get_diagnostic_schema(),
+                        temperature=0.3
+                    )
                 )
             )
-        )
-        
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                logger.warning(f"Rate limit hit for {model_name}, switching to {GEMINI_FLASH_MODEL}")
+                model_name = GEMINI_FLASH_MODEL
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: get_client().models.generate_content(
+                        model=GEMINI_FLASH_MODEL,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=get_diagnostic_schema(),
+                            temperature=0.3
+                        )
+                    )
+                )
+            else:
+                raise e
+            
         result = json.loads(response.text)
+        
+        # Capture usage
+        usage = response.usage_metadata
+        result["input_tokens"] = usage.prompt_token_count if usage else 0
+        result["output_tokens"] = usage.candidates_token_count if usage else 0
+        result["model_name"] = model_name
         
         # Clean up format_ids
         for fmt in result["selected_formats"]:
@@ -524,7 +556,6 @@ Be specific and cite evidence from the brief in your reasoning."""
         if len(result["selected_formats"]) != 5:
             # Fallback if AI gets count wrong, just take first 5 or pad
             logger.warning(f"AI returned {len(result['selected_formats'])} formats, resizing to 5.")
-            # Basic fallback logic not fully implemented here as Gemini 3 Pro is usually reliable
             
         for fmt in result["selected_formats"]:
             if fmt["format_id"] not in CHALLENGE_FORMATS:
@@ -532,7 +563,17 @@ Be specific and cite evidence from the brief in your reasoning."""
                 logger.warning(f"Invalid format ID received: {fmt['format_id']}")
                 fmt["format_id"] = "F01" # Default fallback
         
-        logger.info(f"Diagnostic complete.")
+        # Capture usage
+        usage = response.usage_metadata
+        input_tokens = usage.prompt_token_count if usage else 0
+        output_tokens = usage.candidates_token_count if usage else 0
+        
+        logger.info(f"Diagnostic complete. Tokens: {input_tokens} in / {output_tokens} out")
+        
+        result["input_tokens"] = input_tokens
+        result["output_tokens"] = output_tokens
+        result["model_name"] = model_name
+        
         return result
         
     except Exception as e:
@@ -541,7 +582,10 @@ Be specific and cite evidence from the brief in your reasoning."""
         return {
             "diagnostic_path": [],
             "selected_formats": [{"format_id": "F01", "reasoning": "Fallback", "priority": 1}] * 5,
-            "diagnostic_summary": "Diagnostic analysis unavailable."
+            "diagnostic_summary": "Diagnostic analysis unavailable.",
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "model_name": "error"
         }
 
 
@@ -585,23 +629,40 @@ Return JSON:
 }}"""
 
     try:
-        contents = [prompt]
-        if research_files:
-            # Append file objects/parts to the content list (Long Context)
-            contents.extend(research_files)
+        try:
+            contents = [prompt]
+            if research_files:
+                # Append file objects/parts to the content list (Long Context)
+                contents.extend(research_files)
 
-        response = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: get_client().models.generate_content(
-                model=GEMINI_PRO_MODEL,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    temperature=0.7,
-                    response_mime_type="application/json"
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: get_client().models.generate_content(
+                    model=GEMINI_PRO_MODEL,
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        temperature=0.7,
+                        response_mime_type="application/json"
+                    )
                 )
             )
-        )
-        
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                logger.warning(f"Rate limit hit for {GEMINI_PRO_MODEL}, switching to {GEMINI_FLASH_MODEL}")
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: get_client().models.generate_content(
+                        model=GEMINI_FLASH_MODEL,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            temperature=0.7,
+                            response_mime_type="application/json"
+                        )
+                    )
+                )
+            else:
+                raise e
+            
         response_text = response.text.strip()
         if response_text.startswith("```"):
             response_text = response_text.split("```")[1]
@@ -693,18 +754,36 @@ Return ONLY valid JSON (no markdown):
 }}"""
     
     try:
-        response = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: get_client().models.generate_content(
-                model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.3,
-                    response_mime_type="application/json"
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: get_client().models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.3,
+                        response_mime_type="application/json"
+                    )
                 )
             )
-        )
-        
+        except Exception as e:
+            if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
+                logger.warning(f"Rate limit hit for {model_name}, switching to {GEMINI_FLASH_MODEL}")
+                model_name = GEMINI_FLASH_MODEL # Update for metadata logging
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: get_client().models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.3,
+                            response_mime_type="application/json"
+                        )
+                    )
+                )
+            else:
+                raise e
+            
         response_text = response.text.strip()
         if response_text.startswith("```"):
             response_text = response_text.split("```")[1]
