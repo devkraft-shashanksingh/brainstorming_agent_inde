@@ -461,13 +461,18 @@ async def upload_research_document(
     """Upload research document."""
     
     # Save file
-    upload_dir = Path("./data/research")
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    file_path = upload_dir / file.filename
-    
-    content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
+    try:
+        from data_library.config import DOCS_PATH
+        upload_dir = DOCS_PATH / "research"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        file_path = upload_dir / file.filename
+        
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        print(f"CRITICAL: Failed to save file locally: {e}")
+        raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
     
     # Create DB record
     doc = ResearchDocument(
